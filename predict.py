@@ -4,7 +4,6 @@ import joblib
 
 app = Flask(__name__)
 
-# Load your model
 general_model = joblib.load('general_linear_model.pkl')
 
 def prepare_data(df):
@@ -24,15 +23,12 @@ def predict():
     try:
         data = request.get_json()
         
-        # Get the open and close prices from the JSON request
         open_prices = list(map(float, data.get('open_prices', [])))
         close_prices = list(map(float, data.get('close_prices', [])))
 
-        # Ensure there are at least 5 data points
         if len(open_prices) < 5 or len(close_prices) < 5:
             return jsonify({'error': 'Please provide data for at least 5 days'}), 400
         
-        # Prepare the new data for prediction
         new_data = pd.DataFrame({
             'Open': open_prices[::-1],  
             'Close': close_prices[::-1]   
@@ -40,14 +36,12 @@ def predict():
 
         new_X, _ = prepare_data(new_data)
 
-        # Get predictions from the model
         predictions = general_model.predict(new_X)
 
-        # Get the predicted open and close price for the next day
         predicted_open = predictions[-1][0]
         predicted_close = predictions[-1][1]
 
-        return jsonify({'open': predicted_open, 'close': predicted_close})
+        return jsonify({'predicted_open': predicted_open, 'predicted_close': predicted_close})
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
