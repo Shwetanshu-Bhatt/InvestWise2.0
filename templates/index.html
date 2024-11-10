@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Price Prediction</title>
     <style>
+        /* Styling */
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f9;
@@ -12,7 +13,6 @@
             margin: 0;
             padding: 0;
         }
-
         h1 {
             background-color: #4CAF50;
             color: white;
@@ -20,30 +20,22 @@
             padding: 20px;
             margin: 0;
         }
-
-        h2 {
-            color: #333;
-        }
-
         .container {
             width: 80%;
             margin: 0 auto;
             padding: 20px;
         }
-
         form {
             background-color: #fff;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-
         label {
             font-size: 14px;
             margin: 5px 0;
             display: block;
         }
-
         input[type="number"] {
             padding: 8px;
             font-size: 16px;
@@ -52,7 +44,6 @@
             border: 1px solid #ddd;
             border-radius: 4px;
         }
-
         button {
             background-color: #4CAF50;
             color: white;
@@ -63,11 +54,9 @@
             border-radius: 4px;
             transition: background-color 0.3s;
         }
-
         button:hover {
             background-color: #45a049;
         }
-
         .result {
             background-color: #f1f1f1;
             padding: 15px;
@@ -75,7 +64,6 @@
             margin-top: 20px;
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
         }
-
         .error {
             color: red;
             font-weight: bold;
@@ -92,7 +80,6 @@
             <div id="price-inputs">
                 <label for="open1">Open Price for Day 1: </label>
                 <input type="number" id="open1" name="open_prices[]" required>
-
                 <label for="close1">Close Price for Day 1: </label>
                 <input type="number" id="close1" name="close_prices[]" required>
             </div>
@@ -120,9 +107,8 @@
                 openInput.setAttribute('type', 'number');
                 openInput.setAttribute('id', `open${i}`);
                 openInput.setAttribute('name', 'open_prices[]');
+                openInput.required = true;
                 priceInputs.appendChild(openInput);
-
-                priceInputs.appendChild(document.createElement('br'));
 
                 let closeLabel = document.createElement('label');
                 closeLabel.setAttribute('for', `close${i}`);
@@ -133,9 +119,9 @@
                 closeInput.setAttribute('type', 'number');
                 closeInput.setAttribute('id', `close${i}`);
                 closeInput.setAttribute('name', 'close_prices[]');
+                closeInput.required = true;
                 priceInputs.appendChild(closeInput);
 
-                priceInputs.appendChild(document.createElement('br'));
                 priceInputs.appendChild(document.createElement('br'));
             }
         });
@@ -144,26 +130,29 @@
             event.preventDefault();
             let formData = new FormData(this);
 
-            let data = {};
+            // Parse formData into arrays for open_prices and close_prices
+            let data = { open_prices: [], close_prices: [] };
             formData.forEach((value, key) => {
-                if (!data[key]) {
-                    data[key] = [];
-                }
-                data[key].push(value);
+                if (key === 'open_prices[]') data.open_prices.push(parseFloat(value));
+                if (key === 'close_prices[]') data.close_prices.push(parseFloat(value));
             });
 
+            // Send JSON data
             fetch('http://139.84.216.186:5000/predict', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             })
             .then(response => response.json())
             .then(result => {
                 let resultDiv = document.getElementById('result');
-                resultDiv.classList.remove('error');
-                resultDiv.innerHTML = `Predicted Open: ${result.open}<br>Predicted Close: ${result.close}`;
+                if (result.predicted_open !== undefined && result.predicted_close !== undefined) {
+                    resultDiv.classList.remove('error');
+                    resultDiv.innerHTML = `Predicted Open: ${result.predicted_open}<br>Predicted Close: ${result.predicted_close}`;
+                } else {
+                    resultDiv.classList.add('error');
+                    resultDiv.innerText = result.error || 'Prediction failed. Please check the input data.';
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
