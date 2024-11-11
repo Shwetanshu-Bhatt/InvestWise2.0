@@ -81,7 +81,7 @@
     </div>
 
     <script>
-    // Function to toggle dark mode and save preference in localStorage
+   // Function to toggle dark mode and save preference in localStorage
 function toggleDarkMode() {
     const currentTheme = document.body.getAttribute('data-theme');
     if (currentTheme === 'light') {
@@ -105,7 +105,7 @@ window.onload = () => {
     }
 };
 
-// Form validation and prediction logic
+// Form validation for days input
 document.getElementById('days').addEventListener('input', function() {
     let days = parseInt(this.value);
     let message = document.getElementById('message');
@@ -152,8 +152,8 @@ document.getElementById('prediction-form').addEventListener('submit', function(e
         if (result.predicted_open !== undefined && result.predicted_close !== undefined) {
             resultDiv.classList.remove('error');
             // Round the predicted values to 2 decimals
-            const roundedOpen = result.predicted_open.toFixed(2);
-            const roundedClose = result.predicted_close.toFixed(2);
+            const roundedOpen = parseFloat(result.predicted_open).toFixed(2);
+            const roundedClose = parseFloat(result.predicted_close).toFixed(2);
             resultDiv.innerHTML = `Predicted Open: ${roundedOpen}<br>Predicted Close: ${roundedClose}`;
             
             // Retain the input values
@@ -171,6 +171,7 @@ document.getElementById('prediction-form').addEventListener('submit', function(e
         resultDiv.textContent = 'Error in prediction, please try again.';
     });
 });
+
 
     </script>
 
