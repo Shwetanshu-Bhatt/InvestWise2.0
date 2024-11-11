@@ -7,14 +7,43 @@
     <link rel="icon" href="{{ url_for('static', filename='images/InvestWise.svg') }}" type="image/svg+xml">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
 
-<header>
-    <h1>Stock Price Prediction</h1>
-</header>
+<body data-theme="light">
+    <div class="header">
+        <div class="logo">InvestWise</div>
+        <button class="toggle-dark-mode" onclick="toggleDarkMode()">🌙</button>
+    </div>
 
-<div class="container">
-    {% with messages = get_flashed_messages(with_categories=true) %}
+    <div class="container">
+        <!-- First Section (Introduction) -->
+        <div class="section">
+            <h1>Stock Price Prediction</h1>
+            <p class="intro-text">Predict future stock prices by entering open and close prices over several days. Enhance your investment decisions with data-driven insights!</p>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Features Section -->
+        <div class="section">
+            <div class="features">
+                <div class="feature-card">
+                    <h3>Data Accuracy</h3>
+                    <p>Reliable predictions based on historical price data for informed investment choices.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Simple Input</h3>
+                    <p>Enter open and close prices for a quick prediction without complex settings.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Secure Data</h3>
+                    <p>Your data is handled securely, ensuring privacy and confidentiality.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="flash-message">
                 {% for category, message in messages %}
@@ -22,28 +51,106 @@
                 {% endfor %}
             </div>
         {% endif %}
-    {% endwith %}
+        {% endwith %}
 
-    <form method="POST">
-        <label for="open_prices">Enter Open prices (comma separated):</label>
-        <input type="text" id="open_prices" name="open_prices" required><br>
+        <!-- Form Section -->
+        <div class="section">
+            <form method="POST">
+                <!-- Input for Number of Days -->
+                <label for="days">Number of Days (at least 5): </label>
+                <input type="number" id="days" name="days" min="5" required>
+                <div id="message" class="error hidden">Please enter at least 5 days.</div>
 
-        <label for="close_prices">Enter Close prices (comma separated):</label>
-        <input type="text" id="close_prices" name="close_prices" required><br>
+                <!-- Hidden Price Inputs Section -->
+                <div id="price-inputs" class="hidden">
+                    <label for="open_prices">Open Prices (comma-separated): </label>
+                    <input type="text" id="open_prices" name="open_prices" required>
+                    <label for="close_prices">Close Prices (comma-separated): </label>
+                    <input type="text" id="close_prices" name="close_prices" required>
+                    <button type="submit">Submit</button>
+                </div>
+            </form>
 
-        <input type="submit" value="Predict">
-    </form>
-
-    {% if predicted_open is not none %}
-        <div class="result">
-            <h2>Predicted Open: {{ predicted_open }}</h2>
-            <h2>Predicted Close: {{ predicted_close }}</h2>
+            {% if predicted_open is not none %}
+                <div class="result">
+                    <h2>Predicted Open: {{ predicted_open }}</h2>
+                    <h2>Predicted Close: {{ predicted_close }}</h2>
+                </div>
+            {% endif %}
         </div>
-        {% if message %}
-            <div class="playful-message">{{ message }}</div>
-        {% endif %}
-    {% endif %}
-</div>
+    </div>
 
+    <script>
+        function toggleDarkMode() {
+            const currentTheme = document.body.getAttribute('data-theme');
+            if (currentTheme === 'light') {
+                document.body.setAttribute('data-theme', 'dark');
+                document.querySelector('.toggle-dark-mode').innerHTML = '🌞';
+            } else {
+                document.body.setAttribute('data-theme', 'light');
+                document.querySelector('.toggle-dark-mode').innerHTML = '🌙';
+            }
+        }
+    
+        document.getElementById('days').addEventListener('input', function() {
+            let days = parseInt(this.value);
+            let message = document.getElementById('message');
+            let priceInputs = document.getElementById('price-inputs');
+            let submitButton = document.querySelector('button[type="submit"]');
+    
+            if (days < 5) {
+                message.classList.remove('hidden');
+                priceInputs.classList.add('hidden');
+                submitButton.classList.add('hidden');
+            } else {
+                message.classList.add('hidden');
+                priceInputs.classList.remove('hidden');
+                submitButton.classList.remove('hidden');
+            }
+        });
+    
+        document.getElementById('prediction-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+    
+            const openPrices = document.getElementById('open_prices').value.split(',').map(price => parseFloat(price.trim()));
+            const closePrices = document.getElementById('close_prices').value.split(',').map(price => parseFloat(price.trim()));
+            
+            const resultDiv = document.getElementById('result');
+    
+            if (openPrices.length < 5 || closePrices.length < 5) {
+                resultDiv.classList.add('error');
+                resultDiv.textContent = 'Please provide data for at least 5 days.';
+                return;
+            }
+    
+            const data = { open_prices: openPrices, close_prices: closePrices };
+    
+            
+            fetch('/predict', {  // Using relative URL
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                console.log(result);  // Debug: log the result
+                if (result.predicted_open !== undefined && result.predicted_close !== undefined) {
+                    resultDiv.classList.remove('error');
+                    resultDiv.innerHTML = `Predicted Open: ${result.predicted_open}<br>Predicted Close: ${result.predicted_close}`;
+                } else {
+                    resultDiv.classList.add('error');
+                    resultDiv.textContent = result.error || 'Prediction failed. Please check the input data.';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                resultDiv.classList.add('error');
+                resultDiv.textContent = 'Error in prediction, please try again.';
+            });
+
+
+
+        });
+    </script>
 </body>
 </html>
