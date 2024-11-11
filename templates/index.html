@@ -81,76 +81,98 @@
     </div>
 
     <script>
-        function toggleDarkMode() {
-            const currentTheme = document.body.getAttribute('data-theme');
-            if (currentTheme === 'light') {
-                document.body.setAttribute('data-theme', 'dark');
-                document.querySelector('.toggle-dark-mode').innerHTML = '🌞';
-            } else {
-                document.body.setAttribute('data-theme', 'light');
-                document.querySelector('.toggle-dark-mode').innerHTML = '🌙';
-            }
+    // Function to toggle dark mode and save preference in localStorage
+function toggleDarkMode() {
+    const currentTheme = document.body.getAttribute('data-theme');
+    if (currentTheme === 'light') {
+        document.body.setAttribute('data-theme', 'dark');
+        document.querySelector('.toggle-dark-mode').innerHTML = '🌞';
+        localStorage.setItem('theme', 'dark');  // Save theme preference
+    } else {
+        document.body.setAttribute('data-theme', 'light');
+        document.querySelector('.toggle-dark-mode').innerHTML = '🌙';
+        localStorage.setItem('theme', 'light');  // Save theme preference
+    }
+}
+
+// Load the saved theme on page load
+window.onload = () => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+        document.body.setAttribute('data-theme', savedTheme);
+        const button = document.querySelector('.toggle-dark-mode');
+        button.innerHTML = savedTheme === 'dark' ? '🌞' : '🌙';
+    }
+};
+
+// Form validation and prediction logic
+document.getElementById('days').addEventListener('input', function() {
+    let days = parseInt(this.value);
+    let message = document.getElementById('message');
+    let priceInputs = document.getElementById('price-inputs');
+    let submitButton = document.querySelector('button[type="submit"]');
+
+    if (days < 5) {
+        message.classList.remove('hidden');
+        priceInputs.classList.add('hidden');
+        submitButton.classList.add('hidden');
+    } else {
+        message.classList.add('hidden');
+        priceInputs.classList.remove('hidden');
+        submitButton.classList.remove('hidden');
+    }
+});
+
+// Handle form submission
+document.getElementById('prediction-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+
+    const openPrices = document.getElementById('open_prices').value.split(',').map(price => parseFloat(price.trim()));
+    const closePrices = document.getElementById('close_prices').value.split(',').map(price => parseFloat(price.trim()));
+
+    const resultDiv = document.getElementById('result');
+
+    if (openPrices.length < 5 || closePrices.length < 5) {
+        resultDiv.classList.add('error');
+        resultDiv.textContent = 'Please provide data for at least 5 days.';
+        return;
+    }
+
+    const data = { open_prices: openPrices, close_prices: closePrices };
+
+    // Sending data to the backend for prediction
+    fetch('/predict', {  // Using relative URL
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        console.log(result);  // Debug: log the result
+        if (result.predicted_open !== undefined && result.predicted_close !== undefined) {
+            resultDiv.classList.remove('error');
+            // Round the predicted values to 2 decimals
+            const roundedOpen = result.predicted_open.toFixed(2);
+            const roundedClose = result.predicted_close.toFixed(2);
+            resultDiv.innerHTML = `Predicted Open: ${roundedOpen}<br>Predicted Close: ${roundedClose}`;
+            
+            // Retain the input values
+            document.getElementById('open_prices').value = result.open_prices.join(', ');
+            document.getElementById('close_prices').value = result.close_prices.join(', ');
+            document.getElementById('days').value = result.days;
+        } else {
+            resultDiv.classList.add('error');
+            resultDiv.textContent = result.error || 'Prediction failed. Please check the input data.';
         }
-    
-        document.getElementById('days').addEventListener('input', function() {
-            let days = parseInt(this.value);
-            let message = document.getElementById('message');
-            let priceInputs = document.getElementById('price-inputs');
-            let submitButton = document.querySelector('button[type="submit"]');
-    
-            if (days < 5) {
-                message.classList.remove('hidden');
-                priceInputs.classList.add('hidden');
-                submitButton.classList.add('hidden');
-            } else {
-                message.classList.add('hidden');
-                priceInputs.classList.remove('hidden');
-                submitButton.classList.remove('hidden');
-            }
-        });
-    
-        document.getElementById('prediction-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-    
-            const openPrices = document.getElementById('open_prices').value.split(',').map(price => parseFloat(price.trim()));
-            const closePrices = document.getElementById('close_prices').value.split(',').map(price => parseFloat(price.trim()));
-            
-            const resultDiv = document.getElementById('result');
-    
-            if (openPrices.length < 5 || closePrices.length < 5) {
-                resultDiv.classList.add('error');
-                resultDiv.textContent = 'Please provide data for at least 5 days.';
-                return;
-            }
-    
-            const data = { open_prices: openPrices, close_prices: closePrices };
-    
-            
-            fetch('/predict', {  // Using relative URL
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(result => {
-                console.log(result);  // Debug: log the result
-                if (result.predicted_open !== undefined && result.predicted_close !== undefined) {
-                    resultDiv.classList.remove('error');
-                    resultDiv.innerHTML = `Predicted Open: ${result.predicted_open}<br>Predicted Close: ${result.predicted_close}`;
-                } else {
-                    resultDiv.classList.add('error');
-                    resultDiv.textContent = result.error || 'Prediction failed. Please check the input data.';
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                resultDiv.classList.add('error');
-                resultDiv.textContent = 'Error in prediction, please try again.';
-            });
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        resultDiv.classList.add('error');
+        resultDiv.textContent = 'Error in prediction, please try again.';
+    });
+});
 
-
-
-        });
     </script>
+
 </body>
 </html>
