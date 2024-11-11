@@ -1,10 +1,8 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, flash
 import pandas as pd
 import joblib
 
 app = Flask(__name__)
-
-general_model = joblib.load('general_linear_model.pkl')
 
 def prepare_data(df):
     df['Prev_Open'] = df['Open'].shift(1)
@@ -14,37 +12,58 @@ def prepare_data(df):
     y = df[['Open', 'Close']]
     return X, y
 
-@app.route('/')
+# Loading the model and checking if it loads correctly
+try:
+    general_model = joblib.load('general_linear_model.pkl')
+except Exception as e:
+    print(f"Error loading model: {e}")
+    general_model = None
+
+@app.route("/", methods=["GET", "POST"])
 def index():
-    return render_template('index.html')
+    if request.method == "POST":
+        # Get the open and close prices from the form
+        open_prices = request.form.get("open_prices").split(',')
+        close_prices = request.form.get("close_prices").split(',')
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    try:
-        data = request.get_json()
-        
-        open_prices = list(map(float, data.get('open_prices', [])))
-        close_prices = list(map(float, data.get('close_prices', [])))
-
+        # Check if the user has entered at least 5 data points
         if len(open_prices) < 5 or len(close_prices) < 5:
-            return jsonify({'error': 'Please provide data for at least 5 days'}), 400
-        
+            flash("You must enter at least 5 days of data for both open and close prices.", "error")
+            return render_template("index.html")
+
+        try:
+            # Convert the inputs to floats and reverse the list to match the format (most recent first)
+            open_prices = [float(price.strip()) for price in open_prices[::-1]]
+            close_prices = [float(price.strip()) for price in close_prices[::-1]]
+        except ValueError as e:
+            flash(f"Invalid input: {e}", "error")
+            return render_template("index.html")
+
+        # Prepare the new data for prediction
         new_data = pd.DataFrame({
-            'Open': open_prices[::-1],  
-            'Close': close_prices[::-1]   
+            'Open': open_prices,
+            'Close': close_prices
         })
 
+        # Prepare data for prediction
         new_X, _ = prepare_data(new_data)
 
-        predictions = general_model.predict(new_X)
+        # Check if model is loaded successfully
+        if general_model:
+            try:
+                # Make the prediction
+                predictions = general_model.predict(new_X)
+                predicted_open = predictions[-1][0]
+                predicted_close = predictions[-1][1]
+                return render_template("index.html", predicted_open=predicted_open, predicted_close=predicted_close)
+            except Exception as e:
+                flash(f"Prediction error: {e}", "error")
+                return render_template("index.html")
+        else:
+            flash("Model is not available.", "error")
+            return render_template("index.html")
 
-        predicted_open = predictions[-1][0]
-        predicted_close = predictions[-1][1]
+    return render_template("index.html")
 
-        return jsonify({'predicted_open': predicted_open, 'predicted_close': predicted_close})
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+if __name__ == "__main__":
+    app.run(debug=True)
