@@ -53,9 +53,10 @@ def index():
             try:
                 # Make the prediction
                 predictions = general_model.predict(new_X)
-                predicted_open = predictions[-1][0]
-                predicted_close = predictions[-1][1]
+                predicted_open = round(predictions[-1][0], 2)
+                predicted_close = round(predictions[-1][1], 2)
                 return render_template("index.html", predicted_open=predicted_open, predicted_close=predicted_close)
+
             except Exception as e:
                 flash(f"Prediction error: {e}", "error")
                 return render_template("index.html")
